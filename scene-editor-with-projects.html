@@ -3,67 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scene Editor</title>
-    <style>
-        body { background-color: #121212; color: #ffffff; font-family: Arial, sans-serif; }
-        .container { text-align: center; margin: 20px; }
-        .project { border: 1px solid #333; padding: 10px; margin: 10px; }
-        .button { background-color: #1e1e1e; color: white; border: none; padding: 10px; cursor: pointer; }
-        .button:hover { background-color: #333; }
-    </style>
+    <title>Scene Editor v7.1</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="indexedDB.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Scene Editor</h1>
-        <div id="projects"></div>
-        <button class="button" id="newProjectBtn">Uus Projekt</button>
+    <div class="editor">
+        <h1>Scene Editor v7.1</h1>
+        <div id="home-screen">
+            <h2>Projektide Ajalugu</h2>
+            <ul id="project-history"></ul>
+        </div>
+        <label for="project-name">Nimega: <span id="timestamp"></span></label>
+        <input type="text" id="project-name" placeholder="Nimi tulemus.." />
+        <button onclick="saveProject()">Salvesta Projekt</button>
+        <button onclick="loadProject()">Laadi Projekt</button>
+        <div class="canvas-container">
+            <canvas id="sceneCanvas"></canvas>
+        </div>
     </div>
-
     <script>
-        let projects = [];
-        const projectLimit = 10;
-
-        function loadProjects() {
-            // Load from IndexedDB
-            const request = indexedDB.open('sceneEditorDB');
-            request.onsuccess = function(event) {
-                const db = event.target.result;
-                const transaction = db.transaction(['projects'], 'readonly');
-                const objectStore = transaction.objectStore('projects');
-
-                objectStore.getAll().onsuccess = function(event) {
-                    projects = event.target.result;
-                    updateProjectList();
-                };
-            };
-        }
-
-        function updateProjectList() {
-            const projectsDiv = document.getElementById('projects');
-            projectsDiv.innerHTML = '';
-            projects.slice(-projectLimit).forEach(project => {
-                const projectDiv = document.createElement('div');
-                projectDiv.classList.add('project');
-                projectDiv.innerText = project.name;
-                projectsDiv.appendChild(projectDiv);
-            });
-        }
-
-        document.getElementById('newProjectBtn').addEventListener('click', function() {
-            // Logic to create a new project
-            const projectName = 'scene-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
-            projects.push({ name: projectName });
-            updateProjectList();
-            // Save to IndexedDB
-        });
-
         // Auto-save every 3 seconds
-        setInterval(function() {
+        setInterval(saveProject, 3000);
+        
+        // Project naming with timestamps
+        function updateTimestamp() {
+            const now = new Date();
+            const timestamp = now.toISOString().replace(/T/, '-').replace(/:/g, '-').split('.')[0];
+            document.getElementById('timestamp').innerText = timestamp;
+        }
+        
+        function saveProject() {
+            const projectName = document.getElementById('project-name').value || `scene-${document.getElementById('timestamp').innerText}`;
             // Save project logic here
-            console.log('Auto-saving projects...');
-        }, 3000);
-
-        window.onload = loadProjects;
+            console.log(`Saving project: ${projectName}`);
+        }  
+        
+        function loadProject() {
+            // Load project logic here
+            console.log(`Loading project...`);
+        }
+        
+        // Call updateTimestamp initially
+        updateTimestamp();
     </script>
 </body>
 </html>
