@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scene Editor with Projects</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        #editor { padding: 20px; }
+        .project { margin: 10px 0; }
+        .project-name { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="editor">
+        <h1>Scene Editor</h1>
+        <div id="project-list"></div>
+        <button id="saveButton">Save Project</button>
+        <button id="restoreButton">Restore Last Project</button>
+    </div>
+    <script>
+        const saveButton = document.getElementById('saveButton');
+        const restoreButton = document.getElementById('restoreButton');
+        const projectList = document.getElementById('project-list');
+
+        const dbName = 'SceneEditorDB';
+        const storeName = 'projects';
+
+        // Initialize IndexedDB
+        let db;
+        const request = indexedDB.open(dbName, 1);
+
+        request.onupgradeneeded = function (event) {
+            db = event.target.result;
+            const objectStore = db.createObjectStore(storeName, { keyPath: 'id' });
+            objectStore.createIndex('timestamp', 'timestamp');
+        };
+
+        request.onsuccess = function (event) {
+            db = event.target.result;
+            loadProjects();
+        };
+
+        function saveProject() {
+            const projectName = new Date().toISOString();
+            const project = { id: projectName, content: 'Scene data goes here...', timestamp: new Date() };
+            const transaction = db.transaction([storeName], 'readwrite');
+            const objectStore = transaction.objectStore(storeName);
+            objectStore.add(project);
+            loadProjects();
+            alert('Project saved: ' + projectName);
+        }
+
+        function loadProjects() {
+            projectList.innerHTML = '';
+            const transaction = db.transaction([storeName], 'readonly');
+            const objectStore = transaction.objectStore(storeName);
+            const request = objectStore.getAll();
+
+            request.onsuccess = function (event) {
+                const projects = event.target.result;
+                projects.forEach(project => {
+                    const div = document.createElement('div');
+                    div.className = 'project';
+                    div.innerHTML = `<span class='project-name'>${project.id}</span> - ${new Date(project.timestamp).toLocaleString()}`;
+                    projectList.appendChild(div);
+                });
+            };
+        }
+
+        function restoreLastProject() {
+            const transaction = db.transaction([storeName], 'readonly');
+            const objectStore = transaction.objectStore(storeName);
+            const request = objectStore.index('timestamp').getAll();
+
+            request.onsuccess = function(event) {
+                const projects = event.target.result;
+                if (projects.length > 0) {
+                    const lastProject = projects[projects.length - 1];
+                    alert('Restored project: ' + lastProject.id);
+                    // Logic to restore the content of the project here...
+                } else {
+                    alert('No projects to restore.');
+                }
+            };
+        }
+
+        saveButton.addEventListener('click', saveProject);
+        restoreButton.addEventListener('click', restoreLastProject);
+    </script>
+</body>
+</html>
