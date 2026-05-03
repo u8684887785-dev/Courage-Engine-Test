@@ -1,92 +1,69 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="et">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scene Editor with Projects</title>
+    <title>Scene Editor</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-        #editor { padding: 20px; }
-        .project { margin: 10px 0; }
-        .project-name { font-weight: bold; }
+        body { background-color: #121212; color: #ffffff; font-family: Arial, sans-serif; }
+        .container { text-align: center; margin: 20px; }
+        .project { border: 1px solid #333; padding: 10px; margin: 10px; }
+        .button { background-color: #1e1e1e; color: white; border: none; padding: 10px; cursor: pointer; }
+        .button:hover { background-color: #333; }
     </style>
 </head>
 <body>
-    <div id="editor">
+    <div class="container">
         <h1>Scene Editor</h1>
-        <div id="project-list"></div>
-        <button id="saveButton">Save Project</button>
-        <button id="restoreButton">Restore Last Project</button>
+        <div id="projects"></div>
+        <button class="button" id="newProjectBtn">Uus Projekt</button>
     </div>
+
     <script>
-        const saveButton = document.getElementById('saveButton');
-        const restoreButton = document.getElementById('restoreButton');
-        const projectList = document.getElementById('project-list');
-
-        const dbName = 'SceneEditorDB';
-        const storeName = 'projects';
-
-        // Initialize IndexedDB
-        let db;
-        const request = indexedDB.open(dbName, 1);
-
-        request.onupgradeneeded = function (event) {
-            db = event.target.result;
-            const objectStore = db.createObjectStore(storeName, { keyPath: 'id' });
-            objectStore.createIndex('timestamp', 'timestamp');
-        };
-
-        request.onsuccess = function (event) {
-            db = event.target.result;
-            loadProjects();
-        };
-
-        function saveProject() {
-            const projectName = new Date().toISOString();
-            const project = { id: projectName, content: 'Scene data goes here...', timestamp: new Date() };
-            const transaction = db.transaction([storeName], 'readwrite');
-            const objectStore = transaction.objectStore(storeName);
-            objectStore.add(project);
-            loadProjects();
-            alert('Project saved: ' + projectName);
-        }
+        let projects = [];
+        const projectLimit = 10;
 
         function loadProjects() {
-            projectList.innerHTML = '';
-            const transaction = db.transaction([storeName], 'readonly');
-            const objectStore = transaction.objectStore(storeName);
-            const request = objectStore.getAll();
-
-            request.onsuccess = function (event) {
-                const projects = event.target.result;
-                projects.forEach(project => {
-                    const div = document.createElement('div');
-                    div.className = 'project';
-                    div.innerHTML = `<span class='project-name'>${project.id}</span> - ${new Date(project.timestamp).toLocaleString()}`;
-                    projectList.appendChild(div);
-                });
-            };
-        }
-
-        function restoreLastProject() {
-            const transaction = db.transaction([storeName], 'readonly');
-            const objectStore = transaction.objectStore(storeName);
-            const request = objectStore.index('timestamp').getAll();
-
+            // Load from IndexedDB
+            const request = indexedDB.open('sceneEditorDB');
             request.onsuccess = function(event) {
-                const projects = event.target.result;
-                if (projects.length > 0) {
-                    const lastProject = projects[projects.length - 1];
-                    alert('Restored project: ' + lastProject.id);
-                    // Logic to restore the content of the project here...
-                } else {
-                    alert('No projects to restore.');
-                }
+                const db = event.target.result;
+                const transaction = db.transaction(['projects'], 'readonly');
+                const objectStore = transaction.objectStore('projects');
+
+                objectStore.getAll().onsuccess = function(event) {
+                    projects = event.target.result;
+                    updateProjectList();
+                };
             };
         }
 
-        saveButton.addEventListener('click', saveProject);
-        restoreButton.addEventListener('click', restoreLastProject);
+        function updateProjectList() {
+            const projectsDiv = document.getElementById('projects');
+            projectsDiv.innerHTML = '';
+            projects.slice(-projectLimit).forEach(project => {
+                const projectDiv = document.createElement('div');
+                projectDiv.classList.add('project');
+                projectDiv.innerText = project.name;
+                projectsDiv.appendChild(projectDiv);
+            });
+        }
+
+        document.getElementById('newProjectBtn').addEventListener('click', function() {
+            // Logic to create a new project
+            const projectName = 'scene-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+            projects.push({ name: projectName });
+            updateProjectList();
+            // Save to IndexedDB
+        });
+
+        // Auto-save every 3 seconds
+        setInterval(function() {
+            // Save project logic here
+            console.log('Auto-saving projects...');
+        }, 3000);
+
+        window.onload = loadProjects;
     </script>
 </body>
 </html>
